@@ -1,0 +1,20 @@
+{
+  "name": "stickerforge-wa",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/bot.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pino": "10.4.0",
+    "qrcode-terminal": "0.12.0"
+  },
+  "license": "MIT",
+  "description": "Bot privado experimental de stickers con sonido"
+}
