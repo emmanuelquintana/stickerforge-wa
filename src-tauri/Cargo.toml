@@ -18,7 +18,7 @@ tokio = { version = "1", features = ["process", "io-util", "sync", "time", "macr
 rusqlite = { version = "0.43", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 getrandom = "0.3"
-base64 = "0.22"
+base64 = "0.23"
 dunce = "1"
 
 [target.'cfg(windows)'.dependencies]
