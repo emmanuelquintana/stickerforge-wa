@@ -51,7 +51,7 @@ jobs:
           if ($install.ExitCode -ne 0) { throw "MSI install returned $($install.ExitCode)" }
           $remove = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru -WindowStyle Hidden
           if ($remove.ExitCode -ne 0) { throw "MSI uninstall returned $($remove.ExitCode)" }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: StickerForge-Desktop-Windows-x64
           path: |
