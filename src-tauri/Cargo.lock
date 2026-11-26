@@ -3222,7 +3222,7 @@ version = "0.4.0"
 dependencies = [
  "base64 0.22.1",
  "dunce",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "rusqlite",
  "serde",
  "serde_json",
