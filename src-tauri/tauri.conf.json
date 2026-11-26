@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "StickerForge Desktop",
+  "version": "0.4.0",
+  "identifier": "com.emmanuelquintana.stickerforge",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist/desktop"
+  },
+  "app": {
+    "windows": [
+      { "label": "main", "title": "StickerForge Desktop", "width": 1200, "height": 840, "minWidth": 390, "minHeight": 560 }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'",
+      "assetProtocol": { "enable": true, "scope": ["$APPLOCALDATA/media/**", "$APPLOCALDATA/outputs/**"] }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": ["icons/icon.ico", "icons/icon.png"]
+  }
+}

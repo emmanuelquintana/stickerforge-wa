@@ -6,3 +6,12 @@ whatsapp_session/
 /launcher/payload.zip
 /dist/
 *.exe
+
+/.local/
+/src-tauri/target/
+/src-tauri/engine/
+*.sqlite*
+*.crdownload
+/.playwright-cli/
+/output/playwright/
+/src-tauri/gen/

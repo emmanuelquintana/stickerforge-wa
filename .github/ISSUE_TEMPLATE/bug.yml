@@ -1,0 +1,16 @@
+name: Bug report
+description: Report an observable StickerForge problem
+body:
+  - type: input
+    id: version
+    attributes:
+      label: StickerForge and Windows versions
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps, expected result and observed result
+      description: Use synthetic media. Omit phone numbers, session files, QR codes and conversations.
+    validations:
+      required: true

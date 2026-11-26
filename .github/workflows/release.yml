@@ -1,45 +1,79 @@
-name: Windows release
+name: Windows verification and release
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    tags: ['v0.4.0']
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23.x'
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: choco install ffmpeg -y --no-progress
-      - run: npm install --no-fund
+          node-version: '24.19.0'
+          cache: npm
+      - run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt
+      - run: npm ci --ignore-scripts
+      - name: Verify FFmpeg for integration tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $archive = 'ffmpeg-9.1-essentials_build'
+          $zip = Join-Path $env:RUNNER_TEMP "$archive.zip"
+          curl.exe -fSL --retry 2 "https://www.gyan.dev/ffmpeg/builds/packages/$archive.zip" -o $zip
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne 'b9bbbb3acece000cbeec994f856649354e52c773807841e78908374b24d658fd') {
+            throw 'FFmpeg archive SHA-256 mismatch'
+          }
+          tar.exe -xf $zip -C $env:RUNNER_TEMP "$archive/bin/ffmpeg.exe" "$archive/bin/ffprobe.exe"
+          Join-Path $env:RUNNER_TEMP "$archive/bin" | Out-File $env:GITHUB_PATH -Append -Encoding utf8
+      - run: npm run build
       - run: npm test
-      - run: node --check src/bot.mjs
-      - run: python scripts/build.py
-      - run: .\dist\StickerForge-WA-Setup-x64.exe --version
+      - run: npm audit
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit --file src-tauri/Cargo.lock
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: pwsh -File scripts/stage-windows.ps1
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: npm run desktop -- build --ci
+      - run: pwsh -File scripts/collect-windows.ps1
+      - name: Install and remove MSI
+        shell: pwsh
+        run: |
+          $msi = (Resolve-Path dist/windows/StickerForge-Desktop-0.4.0-x64.msi).Path
+          $install = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart" -Wait -PassThru -WindowStyle Hidden
+          if ($install.ExitCode -ne 0) { throw "MSI install returned $($install.ExitCode)" }
+          $remove = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru -WindowStyle Hidden
+          if ($remove.ExitCode -ne 0) { throw "MSI uninstall returned $($remove.ExitCode)" }
       - uses: actions/upload-artifact@v4
         with:
-          name: StickerForge-WA-Windows-x64
-          path: dist/*
+          name: StickerForge-Desktop-Windows-x64
+          path: |
+            dist/windows/*.exe
+            dist/windows/*.msi
+            dist/windows/*.zip
+            dist/windows/SHA256SUMS.txt
+          if-no-files-found: error
+
   release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/tags/v0.4.0'
+    needs: windows
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: StickerForge-WA-Windows-x64
-          path: dist
-      - run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "StickerForge WA $GITHUB_REF_NAME" --generate-notes --prerelease
+          name: StickerForge-Desktop-Windows-x64
+          path: release
+      - run: |
+          (cd release && sha256sum -c SHA256SUMS.txt)
+          gh release create "$GITHUB_REF_NAME" release/* --verify-tag --repo "$GITHUB_REPOSITORY" --title 'StickerForge Desktop v0.4.0' --generate-notes --draft
         env:
           GH_TOKEN: ${{ github.token }}

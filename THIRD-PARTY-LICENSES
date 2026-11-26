@@ -1,0 +1,21 @@
+StickerForge's application code is MIT. See LICENSE and NOTICE.md.
+
+The Windows package includes the official Node.js Windows x64 runtime. The
+complete Node.js and bundled component license text travels with the application
+as engine/Node-LICENSE.txt. Runtime source:
+https://nodejs.org/dist/v24.19.0/node-v24.19.0.tar.gz
+
+The Node sidecar includes Baileys, pino, qrcode, qrcode-terminal and their
+production dependencies. See each module's license in engine/node_modules.
+The application frontend uses React (MIT), Lucide (ISC and MIT) and Tauri APIs
+(MIT OR Apache-2.0). Their notices and the Rust dependency notices are included
+in engine/notices. The lockfiles identify the exact dependency sources.
+
+FFmpeg and FFprobe are fetched directly from Gyan by the optional in-app setup.
+They are distributed by Gyan under GPL terms for that build. The setup verifies
+the fixed archive's SHA-256 and installs its license alongside the executables.
+https://www.gyan.dev/ffmpeg/builds/
+
+yt-dlp (Unlicense, with separate third-party terms in bundled variants) is
+supported by the legacy command-line downloader and is not distributed in the
+desktop installers.

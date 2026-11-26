@@ -29,4 +29,20 @@ async function direct(raw,out,signal,redirects=0){const u=httpsUrl(raw);const ad
  await pipeline(res,limit(),createWriteStream(out,{flags:'wx',mode:0o600}),{signal});}
 export function downloaderArgs(url){return ['--ignore-config','--no-plugin-dirs','--no-remote-components','--no-cookies','--no-cookies-from-browser','--no-cache-dir','--no-playlist','--playlist-items','1','--use-extractors','default,-generic','--default-search','error','--socket-timeout','12','--retries','1','--extractor-retries','1','--fragment-retries','1','--match-filters',`!is_live & duration <= ${MAX_SECONDS}`,'--max-filesize','20M','--no-progress','--js-runtimes','node','--format','best[height<=?720][protocol=https]','-o','-','--',url];}
 async function platform(url,out,signal){const child=spawn(process.env.YTDLP_PATH||'yt-dlp',downloaderArgs(url),{shell:false,windowsHide:true,stdio:['ignore','pipe','ignore'],signal});const exit=new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',c=>c===0?resolve():reject(Error('No se pudo obtener el video público. Revisa el enlace, los límites o la instalación de yt-dlp.')));});const transfer=pipeline(child.stdout,limit(),createWriteStream(out,{flags:'wx',mode:0o600}),{signal});try{await Promise.all([exit,transfer]);}catch(e){child.kill('SIGKILL');await Promise.allSettled([exit,transfer]);if(e.code==='ENOENT')throw Error('Instala yt-dlp para usar enlaces de redes sociales.');throw e;}}
-export async function downloadLink(raw,out){const link=classifyLink(raw),signal=AbortSignal.timeout(90000);try{if(link.type==='direct')await direct(link.url,out,signal);else await platform(link.url,out,signal);const s=await stat(out);if(!s.size||s.size>MAX_LINK_BYTES)throw Error('Video vacío o demasiado grande.');const p=await probe(out);if(!p.video||p.duration===null||p.duration<=0||p.duration>MAX_SECONDS)throw Error('Se requiere un video de hasta 3 minutos.');return p;}catch(e){if(signal.aborted)throw Error('Tiempo de descarga agotado.');throw e;}}
+export async function downloadLink(raw,out,{signal:parent, directOnly=false}={}){
+  const link=classifyLink(raw), timeout=AbortSignal.timeout(90000);
+  const signal=parent ? AbortSignal.any([timeout,parent]) : timeout;
+  if(directOnly&&link.type==='platform')throw Error('Los extractores de redes sociales requieren aislamiento de red. Usa un enlace HTTPS directo a un video.');
+  try{
+    if(link.type==='direct')await direct(link.url,out,signal);else await platform(link.url,out,signal);
+    const size=(await stat(out)).size;
+    if(!size||size>MAX_LINK_BYTES)throw Error('Video vacío o demasiado grande.');
+    const info=await probe(out,{signal});
+    if(!info.video||info.duration===null||info.duration<=0||info.duration>MAX_SECONDS)throw Error('Se requiere un video de hasta 3 minutos.');
+    return info;
+  }catch(error){
+    if(timeout.aborted)throw Error('Tiempo de descarga agotado.');
+    if(parent?.aborted)throw Error('Operación cancelada.');
+    throw error;
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "stickerforge-wa",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,13 +8,29 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env src/bot.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "dev": "vite desktop-ui --host 127.0.0.1 --port 1420 --strictPort",
+    "build": "tsc -p desktop-ui/tsconfig.json && vite build desktop-ui --outDir ../dist/desktop --emptyOutDir",
+    "desktop": "tauri"
   },
   "dependencies": {
+    "@tauri-apps/api": "2.12.5",
+    "@tauri-apps/plugin-dialog": "2.8.4",
     "@whiskeysockets/baileys": "7.0.0-rc14",
+    "lucide-react": "1.80.0",
     "pino": "10.4.0",
-    "qrcode-terminal": "0.12.0"
+    "qrcode": "1.5.4",
+    "qrcode-terminal": "0.12.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "license": "MIT",
-  "description": "Bot privado experimental de stickers con sonido"
+  "description": "Bot privado experimental de stickers con sonido",
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.6",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
 }
