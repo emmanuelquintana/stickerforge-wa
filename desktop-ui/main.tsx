@@ -261,12 +261,16 @@ function App() {
       setImporting(false);
     }
   }
-  async function installEngine() {
+  async function installEngine(fromArchive = false) {
     setInstalling(true);
     setError('');
     setNotice('');
     try {
-      await invoke('install_engine');
+      const archive = fromArchive
+        ? await open({ filters: [{ name: 'FFmpeg ZIP', extensions: ['zip'] }] })
+        : null;
+      if (fromArchive && !archive) return;
+      await invoke('install_engine', { archive });
       await invoke('diagnose');
       setNotice(t('Motor multimedia disponible.', 'Media engine is ready.'));
     } catch (e) {
@@ -530,6 +534,7 @@ function App() {
         </Disclosure>
         <div className="controls actions"><button className="secondary" onClick={() => void invoke('diagnose').then(() => { setError(''); setNotice(t('FFmpeg y FFprobe respondieron.', 'FFmpeg and FFprobe responded.')); }).catch(e => setError(String(e)))}><CircleHelp size={16} />{t('Comprobar motor', 'Check engine')}</button>
           <button className="secondary" disabled={installing} onClick={() => void installEngine()}><Download size={16} />{installing ? t('Instalando…', 'Installing…') : t('Instalar motor', 'Install engine')}</button>
+          <button className="secondary" disabled={installing} onClick={() => void installEngine(true)}><FolderOpen size={16} />{t('Usar ZIP verificado', 'Use verified ZIP')}</button>
           <button className="secondary" onClick={() => { setAllowed(''); void persist(defaults); }}><RotateCw size={16} />{t('Restablecer', 'Reset')}</button></div>
       </section>}
     </main>

@@ -1,9 +1,7 @@
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, mkdtemp, rename, rm, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { copyFile, mkdir, mkdtemp, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import { run } from '../src/media.mjs';
 
 const archiveName = 'ffmpeg-9.1-essentials_build';
@@ -16,23 +14,30 @@ async function verify(path) {
   if (digest.digest('hex') !== hash) throw new Error('La suma SHA-256 de FFmpeg no coincide');
 }
 
-export async function installToolkit(dir, signal) {
+export async function installToolkit(dir, signal, localArchive) {
   if (process.platform !== 'win32') throw new Error('El asistente de FFmpeg requiere Windows');
   await mkdir(dir, { recursive: true });
   const scratch = await mkdtemp(join(dir, '.install-'));
   const archive = join(scratch, 'ffmpeg.zip');
   try {
-    const timeout = AbortSignal.any([signal, AbortSignal.timeout(240000)]);
-    const response = await fetch(`https://www.gyan.dev/ffmpeg/builds/packages/${archiveName}.zip`, { signal: timeout, redirect: 'error' });
-    if (!response.ok || !response.body) throw new Error('No se pudo descargar FFmpeg');
-    let bytes = 0;
-    const limit = new Transform({
-      transform(chunk, _encoding, callback) {
-        bytes += chunk.length;
-        callback(bytes > 150 * 1024 * 1024 ? new Error('El archivo excede el límite de descarga') : null, chunk);
-      },
-    });
-    await pipeline(Readable.fromWeb(response.body), limit, createWriteStream(archive, { flags: 'wx' }), { signal: timeout });
+    if (localArchive) {
+      const info = await stat(localArchive);
+      if (!info.isFile() || info.size > 150 * 1024 * 1024) throw new Error('Selecciona el ZIP de FFmpeg verificado');
+      await copyFile(localArchive, archive);
+    } else {
+      const url = `https://github.com/GyanD/codexffmpeg/releases/download/9.1/${archiveName}.zip`;
+      try {
+        await run(join(root, 'curl.exe'), [
+          '--disable', '--fail', '--silent', '--show-error', '--location', '--max-redirs', '2',
+          '--proto', '=https', '--proto-redir', '=https', '--max-filesize', '157286400',
+          '--connect-timeout', '15', '--speed-time', '20', '--speed-limit', '1024',
+          '--max-time', '180', '--output', archive, url,
+        ], { signal, timeout: 185000 });
+      } catch (error) {
+        if (signal.aborted) throw error;
+        throw new Error('No se pudo descargar FFmpeg. Intenta de nuevo o selecciona el ZIP verificado desde Configuración.');
+      }
+    }
     await verify(archive);
     await run(join(root, 'tar.exe'), ['-xf', archive, '-C', scratch,
       `${archiveName}/bin/ffmpeg.exe`, `${archiveName}/bin/ffprobe.exe`, `${archiveName}/LICENSE`], { signal });

@@ -13,6 +13,8 @@ Editor multimedia local para Windows x64 con un bot privado de WhatsApp opcional
 
 El descargador admite enlaces directos HTTPS a videos públicos de hasta 20 MiB y 3 minutos. Los extractores de redes sociales requieren aislamiento de red adicional. Los paquetes `.sfpack` se comparten entre instalaciones de StickerForge y contienen archivos WebP. Su importación directa en WhatsApp no está validada.
 
+Configuración también permite instalar FFmpeg desde su ZIP y verifica el mismo SHA-256. Los instaladores carecen de firma digital. El MSI requiere permisos de administrador. [ZIP de FFmpeg 9.1](https://github.com/GyanD/codexffmpeg/releases/download/9.1/ffmpeg-9.1-essentials_build.zip)
+
 ## Desarrollo
 
 `npm ci`, `npm run build` y `npm test`. Las pruebas multimedia necesitan FFmpeg y FFprobe en PATH. Para generar los paquetes en Windows, ejecuta `pwsh -File scripts/stage-windows.ps1` y después `npm run desktop -- build --ci`. Consulta [arquitectura](ARCHITECTURE.md), [comandos](COMMANDS.md) y [seguridad](SECURITY.md).

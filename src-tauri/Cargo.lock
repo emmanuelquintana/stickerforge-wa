@@ -3221,6 +3221,7 @@ name = "stickerforge"
 version = "0.4.0"
 dependencies = [
  "base64 0.22.1",
+ "dunce",
  "getrandom 0.3.4",
  "rusqlite",
  "serde",

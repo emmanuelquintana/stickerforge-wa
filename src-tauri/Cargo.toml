@@ -19,6 +19,7 @@ rusqlite = { version = "0.43", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 getrandom = "0.3"
 base64 = "0.22"
+dunce = "1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_Foundation"] }

@@ -46,7 +46,7 @@ const options = {
 };
 try {
   if (action === 'install') {
-    await installToolkit(dir, signal);
+    await installToolkit(dir, signal, input);
     process.stdout.write('{}');
   } else if (action === 'probe' || action === 'download') {
     let path = input;

@@ -26,7 +26,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $archive = 'ffmpeg-9.1-essentials_build'
           $zip = Join-Path $env:RUNNER_TEMP "$archive.zip"
-          curl.exe -fSL --retry 2 "https://www.gyan.dev/ffmpeg/builds/packages/$archive.zip" -o $zip
+          curl.exe -fSL --retry 2 --max-time 180 "https://github.com/GyanD/codexffmpeg/releases/download/9.1/$archive.zip" -o $zip
           if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne 'b9bbbb3acece000cbeec994f856649354e52c773807841e78908374b24d658fd') {
             throw 'FFmpeg archive SHA-256 mismatch'
           }

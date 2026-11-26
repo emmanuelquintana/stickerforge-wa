@@ -113,9 +113,12 @@ async fn engine(app: &AppHandle, entry: &str) -> Result<Command> {
     } else {
         return Err("No se encontró el motor multimedia incluido".into());
     };
-    let mut command = Command::new(node);
+    let mut command = Command::new(dunce::simplified(&node));
     command
-        .arg(script)
+        .current_dir(dunce::simplified(
+            script.parent().ok_or("Ruta del motor no válida")?,
+        ))
+        .arg(script.file_name().ok_or("Archivo del motor no válido")?)
         .kill_on_drop(true)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -136,6 +139,7 @@ async fn worker(
     cancellation: Option<oneshot::Receiver<()>>,
 ) -> Result<Value> {
     let mut command = engine(app, "desktop/worker.mjs").await?;
+    command.stderr(std::process::Stdio::piped());
     let mut child = command.spawn().map_err(err)?;
     let mut input = child.stdin.take().ok_or("Motor sin entrada")?;
     input
@@ -158,8 +162,24 @@ async fn worker(
             return Err("Operación cancelada".into());
         }
     };
-    let value: Value = serde_json::from_slice(&result.stdout)
-        .map_err(|_| "El motor no devolvió un resultado válido".to_owned())?;
+    let value: Value = serde_json::from_slice(&result.stdout).map_err(|_| {
+        let status = result.status.code().unwrap_or_default();
+        let diagnostic = String::from_utf8_lossy(&result.stderr);
+        let reason = if diagnostic.contains("ERR_MODULE_NOT_FOUND")
+            || diagnostic.contains("MODULE_NOT_FOUND")
+        {
+            "Faltan archivos del motor"
+        } else if diagnostic.contains("Unexpected end of JSON")
+            || diagnostic.contains("not valid JSON")
+        {
+            "El motor rechazó la solicitud"
+        } else if diagnostic.contains("UV_HANDLE_CLOSING") || diagnostic.contains("EINVAL") {
+            "Windows cerró el canal del motor"
+        } else {
+            "El motor no devolvió un resultado válido"
+        };
+        format!("{reason} ({status})")
+    })?;
     if let Some(message) = value["error"].as_str() {
         if message.contains("FFmpeg/ffprobe") {
             return Err("No se pudo leer o convertir el archivo con FFmpeg".into());
@@ -186,7 +206,7 @@ async fn diagnose(app: AppHandle) -> Result<Value> {
 }
 
 #[tauri::command]
-async fn install_engine(app: AppHandle) -> Result<Value> {
+async fn install_engine(app: AppHandle, archive: Option<PathBuf>) -> Result<Value> {
     let state = app.state::<Studio>();
     let _install = state
         .install
@@ -197,7 +217,7 @@ async fn install_engine(app: AppHandle) -> Result<Value> {
     }
     worker(
         &app,
-        json!({"action": "install", "dir": state.root.join("toolkit")}),
+        json!({"action": "install", "dir": state.root.join("toolkit"), "input": archive}),
         None,
     )
     .await
@@ -391,6 +411,7 @@ fn main() {
         .manage(bot::Bot::default())
         .setup(|app| {
             let root = app.path().app_local_data_dir()?;
+            let root = dunce::simplified(&root).to_path_buf();
             let scratch = root.join("media");
             if scratch.exists() {
                 std::fs::remove_dir_all(&scratch)?;
